@@ -8,6 +8,7 @@ from flask import Flask, Response, request, jsonify
 from dotenv import load_dotenv
 import sys
 from backend.batch.utilities.helpers.EnvHelper import EnvHelper
+from backend.batch.utilities.helpers.AzureBlobStorageHelper import AzureBlobStorageClient
 
 # Fixing MIME types for static files under Windows
 mimetypes.add_type("application/javascript", ".js")
@@ -171,9 +172,11 @@ def conversation_with_data(request):
     if not env_helper.SHOULD_STREAM:
         r = requests.post(endpoint, headers=headers, json=body)
         status_code = r.status_code
-        r = r.json()
+        blob_client = AzureBlobStorageClient()
+        container_sas = "?" + blob_client.get_container_sas()
 
-        return Response(json.dumps(r, ensure_ascii=False), status=status_code)
+        r_json_str = r.text.replace('_SAS_TOKEN_PLACEHOLDER_', container_sas)
+        return Response(r_json_str, status=status_code, mimetype='application/json')
     else:
         if request.method == "POST":
             return Response(
